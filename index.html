@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>STREAMS METRO 타일 뽑기</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, -sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #f4f6fb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      color: #222;
+    }
+
+    .wrapper {
+      display: flex;
+      gap: 40px;
+      max-width: 1200px;
+      width: 100%;
+      align-items: stretch;
+    }
+
+    /* 왼쪽: 표시 영역 */
+    .left-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .display {
+      width: 100%;
+      height: 260px;
+      border-radius: 24px;
+      border: 4px solid #555;
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 96px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .display.flash {
+      background: #fffdf0;
+      box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+      transform: translateY(-3px);
+    }
+
+    .controls {
+      display: flex;
+      gap: 24px;
+      margin-top: 8px;
+    }
+
+    button {
+      min-width: 120px;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 18px;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+      transition: all 0.12s ease;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.5;
+      box-shadow: none;
+      transform: none;
+    }
+
+    #drawBtn {
+      background: #2f855a;
+      color: #fff;
+    }
+
+    #resetBtn {
+      background: #c53030;
+      color: #fff;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.22);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    /* 오른쪽: 격자 */
+    .right-panel {
+      flex: 1.1;
+      padding: 16px;
+      border-radius: 26px;
+      background: linear-gradient(145deg,#10b981,#0ea5e9,#6366f1,#ec4899);
+      box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .grid {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 22px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr); /* 여기 숫자를 바꾸면 칸 수 조정 가능 */
+      grid-auto-rows: 64px;
+      gap: 12px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .cell {
+      border-radius: 14px;
+      border: 2px solid rgba(0,0,0,0.08);
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #222;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+      transition: all 0.14s ease;
+    }
+
+    .cell.filled {
+      background: #f1f5f9;
+      border-color: #0ea5e9;
+      box-shadow: 0 6px 14px rgba(15,118,110,0.14);
+      transform: translateY(-1px);
+    }
+
+    .info {
+      font-size: 13px;
+      color: #555;
+      margin-top: 4px;
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 20px;
+      }
+      .wrapper {
+        flex-direction: column;
+      }
+      .display {
+        height: 200px;
+        font-size: 72px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- LEFT -->
+    <div class="left-panel">
+      <div class="title">STREAMS METRO</div>
+      <div id="display" class="display">?</div>
+
+      <div class="controls">
+        <button id="drawBtn">뽑기</button>
+        <button id="resetBtn">초기화</button>
+      </div>
+
+      <div class="info">
+        ※ 현재 구성: 1~10 각 1개, 11~19 각 2개, 20~30 각 1개, ★, 특수타일 2개(ⓐ, ⓑ)<br>
+        필요하면 스크립트의 <b>createDeck()</b> 부분을 실제 구성에 맞게 수정하세요.
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-panel">
+      <div id="grid" class="grid"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 설정 =====
+    const GRID_COLUMNS = 5;
+    const GRID_ROWS = 5;           // 스크린샷처럼 5x5. 필요하면 여기 변경.
+    const TOTAL_CELLS = GRID_COLUMNS * GRID_ROWS;
+
+    const displayEl = document.getElementById("display");
+    const gridEl = document.getElementById("grid");
+    const drawBtn = document.getElementById("drawBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    let deck = [];
+    let cells = [];
+    let drawIndex = 0;
+
+    // 숫자 & 특수 타일 구성 (스트림스 메트로용, 필요시 수정)
+    function createDeck() {
+      const tiles = [];
+
+      // 1~10 각 1개
+      for (let n = 1; n <= 10; n++) tiles.push(n);
+
+      // 11~19 각 2개
+      for (let n = 11; n <= 19; n++) {
+        tiles.push(n);
+        tiles.push(n);
+      }
+
+      // 20~30 각 1개
+      for (let n = 20; n <= 30; n++) tiles.push(n);
+
+      // 조커 및 특수 타일 (이름은 임의 표기)
+      tiles.push("★"); // 조커
+      tiles.push("ⓐ"); // 특수타일 1
+      tiles.push("ⓑ"); // 특수타일 2
+
+      return shuffle(tiles);
+    }
+
+    // Fisher–Yates 셔플
+    function shuffle(array) {
+      const arr = array.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // 격자 생성
+    function createGrid() {
+      gridEl.innerHTML = "";
+      gridEl.style.gridTemplateColumns = `repeat(${GRID_COLUMNS}, 1fr)`;
+      cells = [];
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        gridEl.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+
+    function setDisplay(value) {
+      displayEl.textContent = value;
+      displayEl.classList.add("flash");
+      setTimeout(() => displayEl.classList.remove("flash"), 150);
+    }
+
+    function drawTile() {
+      if (drawIndex >= deck.length || drawIndex >= TOTAL_CELLS) {
+        drawBtn.disabled = true;
+        return;
+      }
+      const tile = deck[drawIndex];
+      setDisplay(tile);
+
+      const cell = cells[drawIndex];
+      cell.textContent = tile;
+      cell.classList.add("filled");
+
+      drawIndex++;
+
+      if (drawIndex >= deck.length || drawIndex >= TOTAL_CELLS) {
+        drawBtn.disabled = true;
+      }
+    }
+
+    function resetGame() {
+      deck = createDeck();
+      drawIndex = 0;
+      createGrid();
+      setDisplay("?");
+      drawBtn.disabled = false;
+    }
+
+    // 이벤트
+    drawBtn.addEventListener("click", drawTile);
+    resetBtn.addEventListener("click", resetGame);
+
+    // 초기화
+    resetGame();
+  </script>
+</body>
+</html>
