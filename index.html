@@ -189,6 +189,7 @@
 
       <div class="info">
         ※ 현재 구성: 1~10 각 1개, 11~19 각 2개, 20~30 각 1개, ★, 특수타일 2개(ⓐ, ⓑ)<br>
+        특수타일<br>
         필요하면 스크립트의 <b>createDeck()</b> 부분을 실제 구성에 맞게 수정하세요.
       </div>
     </div>
@@ -232,8 +233,8 @@
 
       // 조커 및 특수 타일 (이름은 임의 표기)
       tiles.push("★"); // 조커
-      tiles.push("ⓐ"); // 특수타일 1
-      tiles.push("ⓑ"); // 특수타일 2
+      tiles.push("2개제거"); // 특수타일 1
+      tiles.push("2개중1개"); // 특수타일 2
 
       return shuffle(tiles);
     }
@@ -303,3 +304,4 @@
   </script>
 </body>
 </html>
+
